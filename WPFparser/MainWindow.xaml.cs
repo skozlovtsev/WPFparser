@@ -52,7 +52,6 @@ namespace WPFparser
             try
             {
                 data = xlsx.ReadExcelas(filePath);
-                data.Rows[0].Delete();
                 for (int i = 0; i < data.Rows.Count; i++)
                 {
                     view.Items.Add($"УБИ.{Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
@@ -92,10 +91,16 @@ namespace WPFparser
             loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
             try
             {
-                DataTable data = xlsx.ReadExcelas(filePath);
+                DataTable oldData = data;
+                data = xlsx.ReadExcelas(filePath);
                 for (int i = 1; i < data.Rows.Count; i++)
                 {
                     view.Items.Add($"УБИ.{Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                    if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
+                    {
+                        //validation 
+                        messageBox.Items.Add(oldData.Rows[i].ItemArray.ToList()[0].ToString());
+                    }
                 }
                 reloadStatus.Foreground = Brushes.LightGreen;
                 reloadStatus.Text = "Заружено успешно*";
@@ -245,6 +250,7 @@ namespace WPFparser
                         }
 
                     }
+                    dtTable.Rows[0].Delete();
                     return dtTable;
                 }
             }
