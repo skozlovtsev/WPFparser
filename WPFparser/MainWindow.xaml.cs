@@ -32,20 +32,26 @@ namespace WPFparser
     /// </summary>
     public partial class MainWindow : Window
     {
-        public string defPath = "E:\\saves\\WPFparser\\WPFparser\\data.xlsx";
+        public string dirPath = Directory.GetCurrentDirectory();
+        public string filePath;
         readonly string link = @"https://bdu.fstec.ru";
         public DataTable data;
         public MainWindow()
         {
             InitializeComponent();
+            filePath = $"{dirPath}\\data.xlsx";
             Parser parser = new Parser(link);
             Loader loader = new Loader();
             Xlsx xlsx = new Xlsx();
-            pathTB.Text = defPath;
-            loader.LoadFromPathTo($@"{link}{parser.ParseLink()}",defPath);
+            pathTB.Text = dirPath;
+            if (!File.Exists(filePath))
+            {
+                loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
+                messageBox.Items.Add($"Данные были загружены в директорию {filePath}");
+            }
             try
             {
-                data = xlsx.ReadExcelas(defPath);
+                data = xlsx.ReadExcelas(filePath);
                 data.Rows[0].Delete();
                 for (int i = 0; i < data.Rows.Count; i++)
                 {
@@ -56,7 +62,26 @@ namespace WPFparser
         }
         private void PathTB_TextChanged(object sender, TextChangedEventArgs e)
         {
-            defPath = pathTB.Text;
+            try
+            {
+                FileAttributes attr = File.GetAttributes(pathTB.Text);
+                if (attr == FileAttributes.Directory)
+                {
+                    dirPath = pathTB.Text;
+                    reloadStatus.Foreground = Brushes.LightGreen;
+                    reloadStatus.Text = "Путь является валидным*";
+                }
+                else
+                {
+                    reloadStatus.Foreground = Brushes.Red;
+                    reloadStatus.Text = "Путь является НЕ валидным*";
+                }
+            }
+            catch (Exception ex)
+            {
+                reloadStatus.Foreground = Brushes.Red;
+                reloadStatus.Text = "Путь является НЕ валидным*";
+            }
         }
 
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
@@ -64,10 +89,10 @@ namespace WPFparser
             Parser parser = new Parser(link);
             Loader loader = new Loader();
             Xlsx xlsx = new Xlsx();
-            loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", defPath);
+            loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
             try
             {
-                DataTable data = xlsx.ReadExcelas(defPath);
+                DataTable data = xlsx.ReadExcelas(filePath);
                 for (int i = 1; i < data.Rows.Count; i++)
                 {
                     view.Items.Add($"УБИ.{Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
