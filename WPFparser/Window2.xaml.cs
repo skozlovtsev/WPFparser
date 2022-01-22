@@ -5,6 +5,7 @@ namespace WPFparser
 {
     /// <summary>
     /// Логика взаимодействия для Window2.xaml
+    /// Window2 используется как шаблон для отчета о изменениях 
     /// </summary>
     public partial class Window2 : Window
     {

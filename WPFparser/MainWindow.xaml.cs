@@ -12,23 +12,30 @@ namespace WPFparser
 {
     /// <summary>
     /// Логика взаимодействия для MainWindow.xaml
+    /// Полная информация о угразе и Отчеты(если изменения были) выводятся в новом окне Window1 или Window2 соответственно 
     /// </summary>
     public partial class MainWindow : Window
     {
+        //Путь к текущей дирректории (для сохранения данных)
         public string dirPath = Directory.GetCurrentDirectory();
+        //Путь к файлу
         public string filePath;
+        //Адрес сайта ФСТЭК России
         readonly string link = @"https://bdu.fstec.ru";
+        //Текущая страница
         public int page = 1;
+        //Размер страници
         public int pageSize = 15;
         public DataTable data;
         public MainWindow()
         {
             InitializeComponent();
             filePath = $"{dirPath}\\data.xlsx";
-            Parser parser = new Parser(link);
             pathTB.Text = dirPath;
             currPage.Text = page.ToString();
             pageCount.Text = pageSize.ToString();
+            /*В том случае если вайл не существует в messageBox добавляется сообщение (В ListBox messageBox выводятся сообщения и ошибки)
+              В случае если фаил существует, информация (Идентификатор угрозы в формате «УБИ.ХХХ», Наименование угрозы) выводится в ListBox view*/
             if (!File.Exists(filePath))
             {
                 messageBox.Items.Add($"Файла с локальной базой не существует. Для загрузки нажмите кнопку Reload");
@@ -38,6 +45,7 @@ namespace WPFparser
                 data = Xlsx.ReadExcelas(filePath);
                 if (data != null)
                 {
+                    //"Идентификатор УБИ" задается как Первичный Ключ
                     data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
                     for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
                     {
@@ -64,7 +72,7 @@ namespace WPFparser
                     reloadStatus.Text = "Путь является НЕ валидным*";
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 reloadStatus.Foreground = Brushes.Red;
                 reloadStatus.Text = "Путь является НЕ валидным*";
@@ -73,31 +81,33 @@ namespace WPFparser
 
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
         {
-            Parser parser = new Parser(link);
-            Loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
+            Loader.LoadFromPathTo($@"{link}{Parser.ParseLink(link)}", filePath);
             try
             {
                 DataTable oldData = data;
                 data = Xlsx.ReadExcelas(filePath);
                 data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
                 List<Report> changed = new List<Report>();
+                /*Создание отчета
+                  Отчет создается только в том случае если новые данные есть с чем сравнивать*/
                 if (oldData != null)
                 {
+                    //Отчет о изменениях представленн как List<List<Report>> где каждая запись Report это одно измененное поле 
                     List<List<Report>> reports = new List<List<Report>>();
+                    //Для каждой записи проверяется дата последнего изменения данных, если у нового элемента она больше, то вся строка поэлементно сравнивается
                     for (int i = 0; i < data.Rows.Count; i++)
                     {
                         try
                         {
                             if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
                             {
-                                //validation 
                                 List<Report> rep = new List<Report>();
                                 {
                                     for (int j = 1; j < data.Rows[j].ItemArray.Length - 2; j++)
                                     {
                                         if (data.Rows[i].ItemArray.ToList()[j].ToString() != oldData.Rows[i].ItemArray.ToList()[j].ToString())
                                         {
-                                            rep.Add(new Report() { id = data.Rows[i].ItemArray.ToList()[0].ToString(), cell = data.Columns[j].ColumnName, current = data.Rows[j].ItemArray.ToList()[j].ToString(), previous = oldData.Rows[i].ItemArray.ToList()[j].ToString() });
+                                            rep.Add(new Report() { id = $"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}", cell = data.Columns[j].ColumnName, current = data.Rows[j].ItemArray.ToList()[j].ToString(), previous = oldData.Rows[i].ItemArray.ToList()[j].ToString() });
                                         }
                                     }
                                 }
@@ -116,6 +126,7 @@ namespace WPFparser
                             }
                         }
                     }
+                    //Вывод информации о успешном обновлении
                     if (reports.Count > 0)
                     {
                         messageBox.Items.Add("Успешно.");
@@ -129,6 +140,7 @@ namespace WPFparser
                         messageBox.Items.Add("0 записей было обновленно.");
                     }
                 }
+                //Перезагрузка данных в ListBox view 
                 view.Items.Clear();
                 for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
                 {
@@ -138,8 +150,12 @@ namespace WPFparser
                 reloadStatus.Text = "Заружено успешно*";
                 messageBox.Items.Add($"Данные были успешно загружены в директорию {filePath}");
             }
+            //Вывод ошибок
             catch (Exception ex) { messageBox.Items.Add($"{ex}"); };
         }
+        /// <summary>
+        /// Для открытия полной инвормации о угрозе безопастности дважды кликните по записи в VievBox
+        /// </summary>
         private void View_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             string item = view.SelectedItem.ToString();
@@ -158,6 +174,9 @@ namespace WPFparser
         {
             CurrPage_Validation();
         }
+        /// <summary>
+        /// CurrPage_Validation() метод для обработки перехода на другую страницу
+        /// </summary>
         private void CurrPage_Validation()
         {
             if (int.TryParse(currPage.Text, out int value))
@@ -197,14 +216,17 @@ namespace WPFparser
         {
             if (e.Key == Key.Enter)
             {
-                PageCount_Validation();
+                PageSize_Validation();
             }
         }
         private void PageCount_LostFocus(object sender, RoutedEventArgs e)
         {
-            PageCount_Validation();
+            PageSize_Validation();
         }
-        private void PageCount_Validation()
+        /// <summary>
+        /// PageSize_Validation() метод для обработки изменения размера(в записях) страници
+        /// </summary>
+        private void PageSize_Validation()
         {
             if (int.TryParse(pageCount.Text, out int value))
             {

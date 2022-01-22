@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
-
-using Newtonsoft.Json;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using HtmlAgilityPack;
-using DocumentFormat.OpenXml;
 
 namespace WPFparser
 {
@@ -35,33 +30,34 @@ namespace WPFparser
             }
         }
     }
+    //Отчет о изменении
     public class Report
     {
+        //УБИ
         public string id { set; get; }
+        //Поле которое было изменено
         public string cell { set; get; }
+        //СТАЛО
         public string current { set; get; }
+        //БЫЛО
         public string previous { set; get; }
     }
-    public class Parser
+    public abstract class Parser
     {
-        public string Url;
-        public Parser(string url)
-        {
-            Url = url;
-        }
-        public object ParseLink()
+        static public object ParseLink(string url)
         //Парсинг ссылки на xlsx файл
         {
             try
             {
                 HtmlWeb hweb = new HtmlWeb();
-                HtmlDocument hdoc = hweb.Load($@"{Url}/threat");
+                HtmlDocument hdoc = hweb.Load($@"{url}/threat");
                 HtmlNode nodes = hdoc.DocumentNode;
-
+                //Парсинг ссылки(в задании не нашел что конкретно нужно парсить, так что.. сделал как проще и логичнее) на XLSX файл с информацией о угрозах
+                //Парсинг осуществляется через XPath
                 string table = nodes.SelectSingleNode("//*[@id='wrap']/div[3]/div/div[1]/div[2]/div/p/a[@href]").Attributes["href"].Value;
                 return table;
             }
-            catch (Exception ex) { Console.WriteLine(ex.Message); return ex.Message; }
+            catch (Exception ex) { return ex.Message; }
         }
     }
     public abstract class Loader
@@ -83,17 +79,19 @@ namespace WPFparser
     }
     public abstract class Xlsx
     {
+        //Очень не хочу это комментировать..
+        //Открытие XLSX таблици в виде объекта DataTable
         public static DataTable ReadExcelas(string path)
         {
             try
             {
                 DataTable dtTable = new DataTable();
                 using (SpreadsheetDocument doc = SpreadsheetDocument.Open(path, false))
-                {  
+                {
                     WorkbookPart workbookPart = doc.WorkbookPart;
-                    Sheets thesheetcollection = workbookPart.Workbook.GetFirstChild<Sheets>();  
+                    Sheets thesheetcollection = workbookPart.Workbook.GetFirstChild<Sheets>();
                     foreach (Sheet thesheet in thesheetcollection.OfType<Sheet>())
-                    {  
+                    {
                         Worksheet theWorksheet = ((WorksheetPart)workbookPart.GetPartById(thesheet.Id)).Worksheet;
                         SheetData thesheetdata = theWorksheet.GetFirstChild<SheetData>();
                         for (int rCnt = 0; rCnt < thesheetdata.ChildElements.Count(); rCnt++)
@@ -103,7 +101,7 @@ namespace WPFparser
                                 < thesheetdata.ElementAt(rCnt).ChildElements.Count(); rCnt1++)
                             {
 
-                                Cell thecurrentcell = (Cell)thesheetdata.ElementAt(rCnt).ChildElements.ElementAt(rCnt1);  
+                                Cell thecurrentcell = (Cell)thesheetdata.ElementAt(rCnt).ChildElements.ElementAt(rCnt1);
                                 if (thecurrentcell.DataType != null)
                                 {
                                     if (thecurrentcell.DataType == CellValues.SharedString)
@@ -142,9 +140,8 @@ namespace WPFparser
                     return dtTable;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine(ex.Message);
                 return null;
             }
         }

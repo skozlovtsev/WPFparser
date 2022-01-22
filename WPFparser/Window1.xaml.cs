@@ -7,6 +7,7 @@ namespace WPFparser
 {
     /// <summary>
     /// Логика взаимодействия для Window1.xaml
+    /// Window1 используется как шаблон для вывода полной информации
     /// </summary>
     public partial class Window1 : Window
     {
