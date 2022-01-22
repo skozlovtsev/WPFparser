@@ -1,27 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Net.Http;
-using System.Net.Http.Headers;
-
-using DocumentFormat.OpenXml;
-using HtmlAgilityPack;
 using System.IO;
 using System.Data;
-using Newtonsoft.Json;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace WPFparser
 {
@@ -42,20 +27,22 @@ namespace WPFparser
             filePath = $"{dirPath}\\data.xlsx";
             Parser parser = new Parser(link);
             pathTB.Text = dirPath;
+            currPage.Text = page.ToString();
+            pageCount.Text = pageSize.ToString();
             if (!File.Exists(filePath))
             {
-                Loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
-                messageBox.Items.Add($"Данные были загружены в директорию {filePath}");
+                messageBox.Items.Add($"Файла с локальной базой не существует. Для загрузки нажмите кнопку Reload");
             }
             try
             {
                 data = Xlsx.ReadExcelas(filePath);
-                data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
-                currPage.Text = page.ToString();
-                pageCount.Text = pageSize.ToString();
-                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                if (data != null)
                 {
-                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                    data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
+                    for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                    {
+                        view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                    }
                 }
             }
             catch (Exception ex) { messageBox.Items.Add($"{ex}"); };
@@ -92,23 +79,54 @@ namespace WPFparser
             {
                 DataTable oldData = data;
                 data = Xlsx.ReadExcelas(filePath);
+                data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
                 List<Report> changed = new List<Report>();
-                for (int i = 0; i < data.Rows.Count; i++)
+                if (oldData != null)
                 {
-                    try
+                    List<List<Report>> reports = new List<List<Report>>();
+                    for (int i = 0; i < data.Rows.Count; i++)
                     {
-                        if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
+                        try
                         {
-                            //validation 
-                            messageBox.Items.Add(oldData.Rows[i].ItemArray.ToList()[0].ToString());
+                            if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
+                            {
+                                //validation 
+                                List<Report> rep = new List<Report>();
+                                {
+                                    for (int j = 1; j < data.Rows[j].ItemArray.Length - 2; j++)
+                                    {
+                                        if (data.Rows[i].ItemArray.ToList()[j].ToString() != oldData.Rows[i].ItemArray.ToList()[j].ToString())
+                                        {
+                                            rep.Add(new Report() { id = data.Rows[i].ItemArray.ToList()[0].ToString(), cell = data.Columns[j].ColumnName, current = data.Rows[j].ItemArray.ToList()[j].ToString(), previous = oldData.Rows[i].ItemArray.ToList()[j].ToString() });
+                                        }
+                                    }
+                                }
+                                reports.Add(rep);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (ex is IndexOutOfRangeException)
+                            {
+                                messageBox.Items.Add("Запись была добавленна"); 
+                            }
+                            else
+                            {
+                                messageBox.Items.Add(ex.Message);
+                            }
                         }
                     }
-                    catch (Exception ex)
+                    if (reports.Count > 0)
                     {
-                        if (ex is IndexOutOfRangeException)
-                        {
-                            messageBox.Items.Add(ex.Message);
-                        }
+                        messageBox.Items.Add("Успешно.");
+                        messageBox.Items.Add($"{reports.Count} записи были обновленны.");
+                        Window2 window = new Window2(reports);
+                        window.Show();
+                    }
+                    else
+                    {
+                        messageBox.Items.Add("Успешно.");
+                        messageBox.Items.Add("0 записей было обновленно.");
                     }
                 }
                 view.Items.Clear();
@@ -118,7 +136,7 @@ namespace WPFparser
                 }
                 reloadStatus.Foreground = Brushes.LightGreen;
                 reloadStatus.Text = "Заружено успешно*";
-                messageBox.Items.Add("Заружено успешно");
+                messageBox.Items.Add($"Данные были успешно загружены в директорию {filePath}");
             }
             catch (Exception ex) { messageBox.Items.Add($"{ex}"); };
         }
@@ -236,13 +254,11 @@ namespace WPFparser
                 }
             }
         }
-
         private void Next_Click(object sender, RoutedEventArgs e)
         {
             currPage.Text = (Convert.ToInt32(currPage.Text) + 1).ToString();
             CurrPage_Validation();
         }
-
         private void Nast_Click(object sender, RoutedEventArgs e)
         {
             currPage.Text = (Convert.ToInt32(currPage.Text) - 1).ToString();

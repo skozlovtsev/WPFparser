@@ -1,17 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace WPFparser
 {
@@ -28,6 +18,9 @@ namespace WPFparser
             fullInformation.Text = data.ItemArray.ToList()[2].ToString();
             source.Text = data.ItemArray.ToList()[3].ToString();
             confedencial.Text = data.ItemArray.ToList()[4].ToString();
+            blank1.Text = data.ItemArray.ToList()[5].ToString() == "1" ? "Да" : "Нет";
+            blank2.Text = data.ItemArray.ToList()[6].ToString() == "1" ? "Да" : "Нет";
+            blank3.Text = data.ItemArray.ToList()[7].ToString() == "1" ? "Да" : "Нет";
             addDate.Text = DateTime.FromOADate(Convert.ToDouble(data.ItemArray.ToList()[8].ToString())).ToShortDateString();
             updateDate.Text = DateTime.FromOADate(Convert.ToDouble(data.ItemArray.ToList()[9].ToString())).ToShortDateString();
         }
