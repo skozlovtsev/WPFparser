@@ -19,8 +19,6 @@ using DocumentFormat.OpenXml;
 using HtmlAgilityPack;
 using System.IO;
 using System.Data;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
 using Newtonsoft.Json;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -35,26 +33,29 @@ namespace WPFparser
         public string dirPath = Directory.GetCurrentDirectory();
         public string filePath;
         readonly string link = @"https://bdu.fstec.ru";
+        public int page = 1;
+        public int pageSize = 15;
         public DataTable data;
         public MainWindow()
         {
             InitializeComponent();
             filePath = $"{dirPath}\\data.xlsx";
             Parser parser = new Parser(link);
-            Loader loader = new Loader();
-            Xlsx xlsx = new Xlsx();
             pathTB.Text = dirPath;
             if (!File.Exists(filePath))
             {
-                loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
+                Loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
                 messageBox.Items.Add($"Данные были загружены в директорию {filePath}");
             }
             try
             {
-                data = xlsx.ReadExcelas(filePath);
-                for (int i = 0; i < data.Rows.Count; i++)
+                data = Xlsx.ReadExcelas(filePath);
+                data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
+                currPage.Text = page.ToString();
+                pageCount.Text = pageSize.ToString();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
                 {
-                    view.Items.Add($"УБИ.{Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
                 }
             }
             catch (Exception ex) { messageBox.Items.Add($"{ex}"); };
@@ -86,21 +87,34 @@ namespace WPFparser
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
         {
             Parser parser = new Parser(link);
-            Loader loader = new Loader();
-            Xlsx xlsx = new Xlsx();
-            loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
+            Loader.LoadFromPathTo($@"{link}{parser.ParseLink()}", filePath);
             try
             {
                 DataTable oldData = data;
-                data = xlsx.ReadExcelas(filePath);
-                for (int i = 1; i < data.Rows.Count; i++)
+                data = Xlsx.ReadExcelas(filePath);
+                List<Report> changed = new List<Report>();
+                for (int i = 0; i < data.Rows.Count; i++)
                 {
-                    view.Items.Add($"УБИ.{Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
-                    if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
+                    try
                     {
-                        //validation 
-                        messageBox.Items.Add(oldData.Rows[i].ItemArray.ToList()[0].ToString());
+                        if (Convert.ToInt32(oldData.Rows[i].ItemArray.ToList()[9].ToString()) < Convert.ToInt32(data.Rows[i].ItemArray.ToList()[9].ToString()))
+                        {
+                            //validation 
+                            messageBox.Items.Add(oldData.Rows[i].ItemArray.ToList()[0].ToString());
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        if (ex is IndexOutOfRangeException)
+                        {
+                            messageBox.Items.Add(ex.Message);
+                        }
+                    }
+                }
+                view.Items.Clear();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                {
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
                 }
                 reloadStatus.Foreground = Brushes.LightGreen;
                 reloadStatus.Text = "Заружено успешно*";
@@ -108,158 +122,131 @@ namespace WPFparser
             }
             catch (Exception ex) { messageBox.Items.Add($"{ex}"); };
         }
-        static string Zeros(string a)
-        {
-            switch (a.Length)
-            {
-                case 2:
-                    return "0";
-                case 1:
-                    return "00";
-                default:
-                    return "";
-            }
-        }
-
-        private void view_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void View_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             string item = view.SelectedItem.ToString();
-            data.PrimaryKey = new DataColumn[] { data.Columns["Идентификатор УБИ"] };
             DataRow Drw = data.Rows.Find(Convert.ToInt32(item.Substring(4, 3)).ToString());
             Window1 window = new Window1(Drw);
             window.Show();
         }
-
-        private void reportBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void CurrPage_KeyDown(object sender, KeyEventArgs e)
         {
-
-        }
-    }
-    public class Repotr
-    {
-
-    }
-    public class Parser
-    {
-        public string Url;
-        public Parser(string url)
-        {
-            Url = url;
-        }
-        public object ParseLink()
-        //Парсинг ссылки на xlsx файл
-        {
-            try
+            if (e.Key == Key.Enter)
             {
-                HtmlWeb hweb = new HtmlWeb();
-                HtmlDocument hdoc = hweb.Load($@"{Url}/threat");
-                HtmlNode nodes = hdoc.DocumentNode;
-
-                string table = nodes.SelectSingleNode("//*[@id='wrap']/div[3]/div/div[1]/div[2]/div/p/a[@href]").Attributes["href"].Value;
-                return table;
+                CurrPage_Validation();
             }
-            catch (Exception ex) { Console.WriteLine(ex.Message); return ex.Message; }
         }
-    }
-
-    public class Loader
-    {
-        public object LoadFromPathTo(string link, string dir)
-        //Загрузка файла по ссылке
+        private void CurrPage_LostFocus(object sender, RoutedEventArgs e)
         {
-            try
+            CurrPage_Validation();
+        }
+        private void CurrPage_Validation()
+        {
+            if (int.TryParse(currPage.Text, out int value))
             {
-                using (var client = new System.Net.WebClient())
+                if (value < 1)
                 {
-                    client.DownloadFile($@"{link}", dir);
+                    page = 1;
+                    currPage.Text = page.ToString();
                 }
-                return 0;
-            }
-            catch (Exception ex) { Console.WriteLine(ex.Message); return ex.Message; }
-        }
-
-    }
-
-    public class Xlsx
-    {
-        public DataTable ReadExcelas(string path)
-        {
-            try
-            {
-                DataTable dtTable = new DataTable();
-                //Lets open the existing excel file and read through its content . Open the excel using openxml sdk
-                using (SpreadsheetDocument doc = SpreadsheetDocument.Open(path, false))
+                else if (data.Rows.Count > (value - 1) * pageSize)
                 {
-                    //create the object for workbook part  
-                    WorkbookPart workbookPart = doc.WorkbookPart;
-                    Sheets thesheetcollection = workbookPart.Workbook.GetFirstChild<Sheets>();
-
-                    //using for each loop to get the sheet from the sheetcollection  
-                    foreach (Sheet thesheet in thesheetcollection.OfType<Sheet>())
+                    page = value;
+                }
+                else
+                {
+                    page = Convert.ToInt32(Convert.ToDouble(data.Rows.Count) / Convert.ToDouble(pageSize));
+                    currPage.Text = page.ToString();
+                }
+                view.Items.Clear();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                {
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                }
+            }
+            else
+            {
+                page = 1;
+                currPage.Text = page.ToString();
+                view.Items.Clear();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                {
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                }
+            }
+        }
+        private void PageCount_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                PageCount_Validation();
+            }
+        }
+        private void PageCount_LostFocus(object sender, RoutedEventArgs e)
+        {
+            PageCount_Validation();
+        }
+        private void PageCount_Validation()
+        {
+            if (int.TryParse(pageCount.Text, out int value))
+            {
+                if (value < 1)
+                {
+                    pageSize = 1;
+                    pageCount.Text = pageSize.ToString();
+                }
+                else if ((data.Rows.Count <= value * page) & (page > 1))
+                {
+                    if (value >= data.Rows.Count)
                     {
-                        //statement to get the worksheet object by using the sheet id  
-                        Worksheet theWorksheet = ((WorksheetPart)workbookPart.GetPartById(thesheet.Id)).Worksheet;
-
-                        SheetData thesheetdata = theWorksheet.GetFirstChild<SheetData>();
-
-
-
-                        for (int rCnt = 0; rCnt < thesheetdata.ChildElements.Count(); rCnt++)
-                        {
-                            List<string> rowList = new List<string>();
-                            for (int rCnt1 = 0; rCnt1
-                                < thesheetdata.ElementAt(rCnt).ChildElements.Count(); rCnt1++)
-                            {
-
-                                Cell thecurrentcell = (Cell)thesheetdata.ElementAt(rCnt).ChildElements.ElementAt(rCnt1);
-                                //statement to take the integer value  
-                                if (thecurrentcell.DataType != null)
-                                {
-                                    if (thecurrentcell.DataType == CellValues.SharedString)
-                                    {
-                                        int id;
-                                        if (Int32.TryParse(thecurrentcell.InnerText, out id))
-                                        {
-                                            SharedStringItem item = workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(id);
-                                            if (item.Text != null)
-                                            {
-                                                //first row will provide the column name.
-                                                if (rCnt == 1)
-                                                {
-                                                    dtTable.Columns.Add(item.Text.Text);
-                                                }
-                                                else if (rCnt > 1)
-                                                {
-                                                    rowList.Add(item.Text.Text);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    if (rCnt != 0)//reserved for column values
-                                    {
-                                        rowList.Add(thecurrentcell.InnerText);
-                                    }
-                                }
-                            }
-                            if (rCnt != 0)//reserved for column values
-                                dtTable.Rows.Add(rowList.ToArray());
-
-                        }
-
+                        pageSize = data.Rows.Count;
                     }
-                    dtTable.Rows[0].Delete();
-                    return dtTable;
+                    else
+                    {
+                        pageSize = value;
+                    }
+                    pageCount.Text = pageSize.ToString();
+                    page = 1;
+                    currPage.Text = page.ToString();
+                }
+                else if (data.Rows.Count > value * page)
+                {
+                    pageSize = value;
+                }
+
+                else
+                {
+                    pageSize = data.Rows.Count;
+                    pageCount.Text = pageSize.ToString();
+                }
+                view.Items.Clear();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                {
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine(ex.Message);
-                return null;
+                pageSize = 15;
+                pageCount.Text = pageSize.ToString();
+                view.Items.Clear();
+                for (int i = (page - 1) * pageSize; (i < data.Rows.Count) & (i < (page * pageSize)); i++)
+                {
+                    view.Items.Add($"УБИ.{Ubi.Zeros(data.Rows[i].ItemArray.ToList()[0].ToString())}{data.Rows[i].ItemArray.ToList()[0]}   {data.Rows[i].ItemArray.ToList()[1]}");
+                }
             }
         }
-    }
 
+        private void Next_Click(object sender, RoutedEventArgs e)
+        {
+            currPage.Text = (Convert.ToInt32(currPage.Text) + 1).ToString();
+            CurrPage_Validation();
+        }
+
+        private void Nast_Click(object sender, RoutedEventArgs e)
+        {
+            currPage.Text = (Convert.ToInt32(currPage.Text) - 1).ToString();
+            CurrPage_Validation();
+        }
+    }
 }
