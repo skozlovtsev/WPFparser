@@ -10,7 +10,10 @@
         <ListView x:Name="listOfChanges" HorizontalAlignment="Left" Height="419" VerticalAlignment="Top" Width="792">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn/>
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=id}">УБИ</GridViewColumn>
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=cell}">Парраметр</GridViewColumn>
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=previous}" Width="100">Старое значение</GridViewColumn>
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=current}">Новое значение</GridViewColumn>
                 </GridView>
             </ListView.View>
         </ListView>

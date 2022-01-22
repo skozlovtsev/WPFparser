@@ -35,26 +35,10 @@ namespace WPFparser
             }
         }
     }
-    public abstract class ReportValidator
-    {
-        public static List<Report> Validate(DataRow curr, DataRow prev)
-        {
-            List<Report> rep = new List<Report>();
-            {
-                for(int i = 1; i < curr.ItemArray.Length - 2; i++)
-                {
-                    if (curr.ItemArray.ToList()[i].ToString() != prev.ItemArray.ToList()[i].ToString())
-                    {
-                        rep.Add(new Report() { id = curr.ItemArray.ToList()[0].ToString(), current = curr.ItemArray.ToList()[i].ToString(), previous = prev.ItemArray.ToList()[i].ToString() }) ;
-                    }
-                }
-            }
-            return rep;
-        }
-    }
     public class Report
     {
         public string id { set; get; }
+        public string cell { set; get; }
         public string current { set; get; }
         public string previous { set; get; }
     }

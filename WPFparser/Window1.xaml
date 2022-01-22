@@ -17,6 +17,16 @@
         <TextBlock x:Name="confedencial" HorizontalAlignment="Left" Margin="129,126,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="16" Width="763" Height="40"/>
         <TextBlock x:Name="updateDate" HorizontalAlignment="Left" Margin="828,304,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="25" Width="64"/>
         <TextBlock x:Name="addDate" HorizontalAlignment="Left" Margin="828,276,0,0" TextWrapping="Wrap" VerticalAlignment="Top" RenderTransformOrigin="1.559,-1.903" Height="25" Width="64"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,100,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="21" Width="114" Text="Источник угрозы" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,126,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="114" Text="Объект воздействия" FontWeight="Bold" FontStyle="Italic" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="598,304,0,0" TextWrapping="Wrap" Text="Дата последнего изменения данных" VerticalAlignment="Top" Height="25" Width="225" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock HorizontalAlignment="Left" Margin="598,276,0,0" TextWrapping="Wrap" Text="Дата включения угрозы в БнД УБИ" VerticalAlignment="Top" Height="25" Width="225" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,171,0,0" TextWrapping="Wrap" Text="Нарушение конфиденциальности" VerticalAlignment="Top" Width="114" Height="35" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,211,0,0" TextWrapping="Wrap" Text="Нарушение целостности" VerticalAlignment="Top" Width="114" Height="35" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,251,0,0" TextWrapping="Wrap" Text="Нарушение доступности" VerticalAlignment="Top" Width="114" Height="35" FontWeight="Bold" FontStyle="Italic"/>
+        <TextBlock x:Name="blank3" HorizontalAlignment="Left" Margin="129,251,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="35" Width="35" TextAlignment="Center"/>
+        <TextBlock x:Name="blank2" HorizontalAlignment="Left" Margin="129,211,0,0" TextWrapping="Wrap" VerticalAlignment="Top" RenderTransformOrigin="-0.082,0" Height="35" Width="35" TextAlignment="Center"/>
+        <TextBlock x:Name="blank1" HorizontalAlignment="Left" Margin="129,171,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="35" Height="35" TextAlignment="Center"/>
 
     </Grid>
 </Window>
