@@ -63,6 +63,7 @@ namespace WPFparser
                 if (attr == FileAttributes.Directory)
                 {
                     dirPath = pathTB.Text;
+                    filePath = $"{dirPath}\\data.xlsx";
                     reloadStatus.Foreground = Brushes.LightGreen;
                     reloadStatus.Text = "Путь является валидным*";
                 }
